@@ -31,18 +31,18 @@ namespace eval ::unitytray {
     }
 
 
+    variable window_active
 
     set options ""
     set delay 5
     set unitytrayfont ""
     set pipe ""
+    set window_active true
     array set statuses {}
 }
 
 proc ::unitytray::load {} {
     if {![info exists ::unitytray] || $::unitytray == ""} {
-      debugmsg unitytray "Failed to find unitytray"
-      puts "failed dat sheet"
       return
     }
 
@@ -51,10 +51,10 @@ proc ::unitytray::load {} {
     ::unitytray::open_unitytray_cat
 
 
-    hook::add raise_chat_tab_hook ::unitytray::chat_opened 20
+    hook::add got_focus_hook ::unitytray::chat_opened 20
+    hook::add lost_focus_hook ::unitytray::chat_minimized 20
 
     foreach event $::unitytray {
-        puts event
         switch -- $event {
             presence {
                 hook::add client_presence_hook ::unitytray::presence_notify 100
@@ -63,7 +63,6 @@ proc ::unitytray::load {} {
                 hook::add draw_message_hook ::unitytray::chat_message_notify 20
             }
             default {
-                puts "I dunno"
                 debugmsg unitytray "Unsupported notify type $event"
             }
         }
@@ -90,7 +89,8 @@ proc ::unitytray::unload {} {
     }
 
 
-    hook::remove raise_chat_tab_hook ::unitytray::chat_opened 20
+    hook::remove got_focus_hook ::unitytray::chat_opened 20
+    hook::remove lost_focus_hook ::unitytray::chat_minimized 20
 
     variable pipe
     unitytray::try_write "q"
@@ -130,8 +130,17 @@ proc ::unitytray::try_write {text} {
 
 
 #When window opened
-proc ::unitytray::chat_opened {$chatid $type} {
-  unitytray::try_write "c"
+proc ::unitytray::chat_opened {$path} {
+    unitytray::try_write "c"
+
+    variable window_active
+    set window_active true
+}
+
+#When window minimized or lost focus
+proc ::unitytray::chat_minimized {$path} {
+    variable window_active
+    set window_active false
 }
 
 proc ::unitytray::presence_notify {xlib from type x args} {
@@ -156,11 +165,9 @@ proc ::unitytray::presence_notify {xlib from type x args} {
         switch -- $attr {
             -status {
                 set status $val
-                puts "status shown"
             }
             -show {
                 set show $val
-                puts "window shown"
             }
         }
     }
@@ -186,7 +193,10 @@ proc ::unitytray::presence_notify {xlib from type x args} {
 }
 
 proc ::unitytray::chat_message_notify {chatid from type body extras} {
-    puts $type
+    variable window_active
+    if {$window_active eq true} {
+      return
+    }
 
     if {[chat::is_our_jid $chatid $from]} {
         return
@@ -218,8 +228,8 @@ proc ::unitytray::chat_message_notify {chatid from type body extras} {
 
     set our_nick [get_our_groupchat_nick $chatid]
     if {$type eq "groupchat"} {
+        # if mentioned - show private
         if {[check_message $our_nick $body] eq 1} {
-            puts "mention"
             unitytray::try_write "p"
         } else {
             unitytray::try_write "a"
