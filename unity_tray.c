@@ -91,16 +91,18 @@ int main (int argc, char **argv)
 
 
   action_group = gtk_action_group_new ("AppActions");
+  /*
   gtk_action_group_add_actions (action_group,
                                 entries, n_entries,
                                 window);
+                                */
 
 
   uim = gtk_ui_manager_new ();
   g_object_set_data_full (G_OBJECT (window),
                           "ui-manager", uim,
                           g_object_unref);
-  gtk_ui_manager_insert_action_group (uim, action_group, 0);
+  //gtk_ui_manager_insert_action_group (uim, action_group, 0);
 
 
   gtk_window_add_accel_group (GTK_WINDOW (window),
@@ -131,7 +133,6 @@ int main (int argc, char **argv)
   indicator_menu = gtk_ui_manager_get_widget (uim, "/ui/IndicatorPopup");
 
   app_indicator_set_status (indicator, APP_INDICATOR_STATUS_ACTIVE);
-  //app_indicator_set_attention_icon (indicator, "icons/available.gif");
 
   app_indicator_set_menu (indicator, GTK_MENU (indicator_menu));
 
@@ -167,7 +168,7 @@ int main (int argc, char **argv)
             got_private = false;
             break;
       }
-  } while (c != 'q');
+  } while (c != 'q' || !c);
 
   return 0;
 }
