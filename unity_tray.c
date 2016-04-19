@@ -1,6 +1,10 @@
+#include <stdbool.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <libappindicator/app-indicator.h>
+
+
+#define PLUGIN_PATH "/home/kerrigan/.tkabber/plugins/unitytray/"
 
 static void activate_action (GtkAction *action);
 
@@ -87,16 +91,18 @@ int main (int argc, char **argv)
 
 
   action_group = gtk_action_group_new ("AppActions");
+  /*
   gtk_action_group_add_actions (action_group,
                                 entries, n_entries,
                                 window);
+                                */
 
 
   uim = gtk_ui_manager_new ();
   g_object_set_data_full (G_OBJECT (window),
                           "ui-manager", uim,
                           g_object_unref);
-  gtk_ui_manager_insert_action_group (uim, action_group, 0);
+  //gtk_ui_manager_insert_action_group (uim, action_group, 0);
 
 
   gtk_window_add_accel_group (GTK_WINDOW (window),
@@ -113,16 +119,20 @@ int main (int argc, char **argv)
   //gtk_widget_show_all (window);
 
 
+  const char* home = g_get_home_dir();
+  const char* available_icon = g_build_filename(home, ".tkabber/plugins/unitytray/icons/available.png", NULL);
+  const char* messages_icon = g_build_filename(home, ".tkabber/plugins/unitytray/icons/message.png", NULL);
+  const char* private_icon = g_build_filename(home, ".tkabber/plugins/unitytray/icons/message-personal.png", NULL);
+
 
   /* Indicator */
   indicator = app_indicator_new ("example-simple-client",
-                                 "indicator-messages",
+                                 available_icon,
                                  APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
 
   indicator_menu = gtk_ui_manager_get_widget (uim, "/ui/IndicatorPopup");
 
   app_indicator_set_status (indicator, APP_INDICATOR_STATUS_ACTIVE);
-  app_indicator_set_attention_icon (indicator, "indicator-messages-new");
 
   app_indicator_set_menu (indicator, GTK_MENU (indicator_menu));
 
@@ -134,21 +144,31 @@ int main (int argc, char **argv)
 
   printf("%s\n", base_path);
 
+  static bool got_private = false;
+
+  printf("%s\n", argv[0]);
+
+
+
   char c;
   do {
       c = getchar();
       switch (c) {
           case 'a'/* value */:
-            app_indicator_set_icon (indicator, "/home/kerrigan/programming/unity-tray-plugin/unread-notification.png");
+            if(!got_private){
+                app_indicator_set_icon (indicator, messages_icon);
+            }
             break;
           case 'p':
-            app_indicator_set_icon (indicator, "/home/kerrigan/programming/unity-tray-plugin/unread-direct-notification.png");
+            app_indicator_set_icon (indicator, private_icon);
+            got_private = true;
             break;
           case 'c':
-            app_indicator_set_icon(indicator, "indicator-messages");
+            app_indicator_set_icon(indicator, available_icon);
+            got_private = false;
             break;
       }
-  } while (c != 'q');
+  } while (c != 'q' || !c);
 
   return 0;
 }
